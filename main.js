@@ -9,25 +9,25 @@ var Tetris = tm.createClass({
     init: function() {
         this.superInit("#world");
         this.resize(10 * 10, 10 * 20);
-
-        this.canvas.setFillStyle("white");
-        this.canvas.clearColor("black");
-
         this.blocks = Blocks(this);
         this.currentScene.addChild(this.blocks);
     },
     blocks: null,
     update: function() {
+        if (this.keyboard.getKey("left")) {
+            this.blocks.moveLeft();
+        } else if (this.keyboard.getKey("right")) {
+            this.blocks.moveRight();
+        }
         if (this.frame % 5 === 0) {
             if (this.blocks.checkLand()) {
                 this.blocks.fix();
-                var checkResult = this.blocks.check();
-                for (var i = 0; i < checkResult.length; i++) {
-                    this.blocks.eraseRow(checkResult[i]);
+                var lines = this.blocks.checkLines().sort();
+                for (var i = 0; i < lines.length; i++) {
+                    this.blocks.eraseLine(lines[i]);
                 }
-                var result = this.blocks.next();
-                if (!result) {
-                    this.gameover();
+                if (!this.blocks.next()) {
+                    return this.gameover();
                 }
             } else {
                 this.blocks.fall();
@@ -43,6 +43,8 @@ var Tetris = tm.createClass({
 var Blocks = tm.createClass({
     superClass: tm.app.CanvasElement,
     cells: [],
+    position: { x: 0, y: 0},
+    current: null,
     init: function(tetris) {
         this.superInit(tetris.width, tetris.height);
         for (var i = 0; i < 20; i++) {
@@ -53,7 +55,10 @@ var Blocks = tm.createClass({
         for (var y = 20-1; y >= 0; y--) {
             for (var x = 0; x < 10; x++) {
                 if (this.cells[y][x]) {
-                    canvas.fillRect(x*10, y*10, 10, 10);
+                    canvas.setFillStyle("#ffffff")
+                        .fillRect(x*10, y*10, 10, 10)
+                        .setFillStyle("#aaaaaa")
+                        .fillRect(x*10+2, y*10+2, 6, 6);
                 }
             }
         }
@@ -78,7 +83,7 @@ var Blocks = tm.createClass({
             }
         }
     },
-    check: function() {
+    checkLines: function() {
         var result = [];
         for (var y = 20-1; y >= 0; y--) {
             var b = true;
@@ -91,11 +96,11 @@ var Blocks = tm.createClass({
         }
         return result;
     },
-    eraseRow: function(row) {
+    eraseLine: function(row) {
         for (var x = 0; x < 10; x++) {
             this.cells[row][x] = 0;
         }
-        for (var y = 20-1; y >= 0; y--) {
+        for (var y = 20-2; y >= 0; y--) {
             for (var x = 0; x < 10; x++) {
                 if (y > row) {
                     this.cells[y+1][x] = this.cells[y][x];
@@ -105,7 +110,7 @@ var Blocks = tm.createClass({
         }
     },
     fall: function() {
-        for (var y = 20-1; y >= 0; y--) {
+        for (var y = 20-2; y >= 0; y--) {
             for (var x = 0; x < 10; x++) {
                 if (this.cells[y][x] === 2) {
                     this.cells[y+1][x] = 2;
@@ -113,60 +118,119 @@ var Blocks = tm.createClass({
                 }
             }
         }
+        this.position.y += 1;
     },
     next: function() {
-        var d = data.random();
-        for (var i = 0; i < d.length; i++) {
-            if (this.cells[d[i].y][d[i].x] === 1) {
-                return false;
+        this.position.x = 3;
+        this.position.y = 0;
+        var d = this.current = data.random().clone();
+        for (var y = 0; y < 4; y++) {
+            for (var x = 0; x < 4; x++) {
+                if (d[y][x] === 0) {
+                    continue;
+                }
+                if (this.cells[this.position.y + y][this.position.x + x] === 1) {
+                    return false;
+                }
+                this.cells[this.position.y + y][this.position.x + x] = d[y][x];
             }
-            this.cells[d[i].y][d[i].x] = 2;
         }
         return true;
+    },
+    moveLeft: function() {
+        for (var y = 20-1; y >= 0; y--) {
+            for (var x = 0; x < 10; x++) {
+                if (this.cells[y][x] === 2) {
+                    if (x === 0 || this.cells[y][x-1] === 1) {
+                        return;
+                    }
+                }
+            }
+        }
+        for (var y = 20-1; y >= 0; y--) {
+            for (var x = 0; x < 10; x++) {
+                if (this.cells[y][x] === 2) {
+                    this.cells[y][x-1] = 2;
+                    this.cells[y][x] = 0;
+                }
+            }
+        }
+        this.position.x -= 1;
+    },
+    moveRight: function() {
+        for (var y = 20-1; y >= 0; y--) {
+            for (var x = 0; x < 10; x++) {
+                if (this.cells[y][x] === 2) {
+                    if (x === 10-1 || this.cells[y][x+1] === 1) {
+                        return;
+                    }
+                }
+            }
+        }
+        for (var y = 20-1; y >= 0; y--) {
+            for (var x = 10-1; x >= 0; x--) {
+                if (this.cells[y][x] === 2) {
+                    this.cells[y][x+1] = 2;
+                    this.cells[y][x] = 0;
+                }
+            }
+        }
+        this.position.x += 1;
+    },
+    turnLeft: function() {
+        var n = [[],[],[],[]];
+        for (var y = 0; y < 4; y++) {
+            for (var x = 0; x < 4; x++) {
+                n[4 - x][y] = this.current[y][x];
+            }
+        }
+    },
+    turnRight: function() {
+
     }
 });
 
 var data = [
     [
-        { x: 4, y: 0},
-        { x: 5, y: 0},
-        { x: 6, y: 0},
-        { x: 7, y: 0},
+        [0, 0, 0, 0],
+        [2, 2, 2, 2],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
     ],
     [
-        { x: 4, y: 0},
-        { x: 5, y: 0},
-        { x: 6, y: 0},
-        { x: 5, y: 1},
+        [0, 0, 0, 0],
+        [0, 2, 2, 0],
+        [0, 2, 2, 0],
+        [0, 0, 0, 0],
     ],
     [
-        { x: 4, y: 0},
-        { x: 5, y: 0},
-        { x: 6, y: 0},
-        { x: 6, y: 1},
+        [0, 0, 0, 0],
+        [0, 2, 0, 0],
+        [2, 2, 2, 0],
+        [0, 0, 0, 0],
     ],
     [
-        { x: 4, y: 0},
-        { x: 5, y: 0},
-        { x: 6, y: 0},
-        { x: 4, y: 1},
+        [0, 0, 0, 0],
+        [0, 0, 2, 0],
+        [2, 2, 2, 0],
+        [0, 0, 0, 0],
     ],
     [
-        { x: 4, y: 0},
-        { x: 5, y: 0},
-        { x: 5, y: 1},
-        { x: 6, y: 1},
+        [0, 0, 0, 0],
+        [2, 0, 0, 0],
+        [2, 2, 2, 0],
+        [0, 0, 0, 0],
     ],
     [
-        { x: 5, y: 0},
-        { x: 6, y: 0},
-        { x: 4, y: 1},
-        { x: 5, y: 1},
+        [0, 0, 0, 0],
+        [0, 2, 2, 0],
+        [2, 2, 0, 0],
+        [0, 0, 0, 0],
     ],
     [
-        { x: 5, y: 0},
-        { x: 6, y: 0},
-        { x: 5, y: 1},
-        { x: 6, y: 1},
+        [0, 0, 0, 0],
+        [2, 2, 0, 0],
+        [0, 2, 2, 0],
+        [0, 0, 0, 0],
     ],
 ];
