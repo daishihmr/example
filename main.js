@@ -43,7 +43,7 @@ var Tetris = tm.createClass({
 var Blocks = tm.createClass({
     superClass: tm.app.CanvasElement,
     cells: [],
-    position: { x: 0, y: 0},
+    turnCenter: { x: 0, y: 0},
     current: null,
     init: function(tetris) {
         this.superInit(tetris.width, tetris.height);
@@ -100,12 +100,10 @@ var Blocks = tm.createClass({
         for (var x = 0; x < 10; x++) {
             this.cells[row][x] = 0;
         }
-        for (var y = 20-2; y >= 0; y--) {
+        for (var y = row-1; y >= 0; y--) {
             for (var x = 0; x < 10; x++) {
-                if (y > row) {
-                    this.cells[y+1][x] = this.cells[y][x];
-                    this.cells[y][x] = 0;
-                }
+                this.cells[y+1][x] = this.cells[y][x];
+                this.cells[y][x] = 0;
             }
         }
     },
@@ -118,21 +116,21 @@ var Blocks = tm.createClass({
                 }
             }
         }
-        this.position.y += 1;
+        this.turnCenter.y += 1;
     },
     next: function() {
-        this.position.x = 3;
-        this.position.y = 0;
+        this.turnCenter.x = 3;
+        this.turnCenter.y = 0;
         var d = this.current = data.random().clone();
         for (var y = 0; y < 4; y++) {
             for (var x = 0; x < 4; x++) {
                 if (d[y][x] === 0) {
                     continue;
                 }
-                if (this.cells[this.position.y + y][this.position.x + x] === 1) {
+                if (this.cells[this.turnCenter.y + y][this.turnCenter.x + x] === 1) {
                     return false;
                 }
-                this.cells[this.position.y + y][this.position.x + x] = d[y][x];
+                this.cells[this.turnCenter.y + y][this.turnCenter.x + x] = d[y][x];
             }
         }
         return true;
@@ -155,7 +153,7 @@ var Blocks = tm.createClass({
                 }
             }
         }
-        this.position.x -= 1;
+        this.turnCenter.x -= 1;
     },
     moveRight: function() {
         for (var y = 20-1; y >= 0; y--) {
@@ -175,7 +173,7 @@ var Blocks = tm.createClass({
                 }
             }
         }
-        this.position.x += 1;
+        this.turnCenter.x += 1;
     },
     turnLeft: function() {
         var n = [[],[],[],[]];
